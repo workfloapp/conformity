@@ -2,7 +2,7 @@
   (:require [datomic.api :refer [q db] :as d]
             [clojure.java.io :as io]))
 
-(def default-conformity-attribute :confirmity/conformed-norms)
+(def default-conformity-attribute :conformity/conformed-norms)
 (def conformity-ensure-norm-tx :conformity/ensure-norm-tx)
 
 (def ensure-norm-tx-txfn
@@ -53,29 +53,41 @@
 (defn ensure-conformity-schema
   "Ensure that the two attributes and one transaction function
   required to track conformity via the conformity-attr keyword
-  parameter are installed in the database."
-  [conn conformity-attr]
-  (when-not (has-attribute? (db conn) conformity-attr)
-    (d/transact conn [{:db/id (d/tempid :db.part/db)
-                       :db/ident conformity-attr
-                       :db/valueType :db.type/keyword
-                       :db/cardinality :db.cardinality/one
-                       :db/doc "Name of this transaction's norm"
-                       :db/index true
-                       :db.install/_attribute :db.part/db}]))
-  (when-not (has-attribute? (db conn) (index-attr conformity-attr))
-    (d/transact conn [{:db/id (d/tempid :db.part/db)
-                       :db/ident (index-attr conformity-attr)
-                       :db/valueType :db.type/long
-                       :db/cardinality :db.cardinality/one
-                       :db/doc "Index of this transaction within its norm"
-                       :db/index true
-                       :db.install/_attribute :db.part/db}]))
-  (when-not (has-function? (db conn) conformity-ensure-norm-tx)
-    (d/transact conn [{:db/id (d/tempid :db.part/user)
-                       :db/ident conformity-ensure-norm-tx
-                       :db/doc "Ensures each norm tx is executed exactly once"
-                       :db/fn ensure-norm-tx-txfn}])))
+  parameter are installed in the database.
+
+  Takes optional extra data to add to each transaction made
+  by this function. This gives control over features like
+  setting the transaction :db/txInstant."
+  ([conn conformity-attr]
+   (ensure-conformity-schema conn conformity-attr nil))
+  ([conn conformity-attr tx-extra]
+   (when-not (has-attribute? (db conn) conformity-attr)
+     (d/transact conn
+                 (cond-> [{:db/id (d/tempid :db.part/db)
+                           :db/ident conformity-attr
+                           :db/valueType :db.type/keyword
+                           :db/cardinality :db.cardinality/one
+                           :db/doc "Name of this transaction's norm"
+                           :db/index true
+                           :db.install/_attribute :db.part/db}]
+                   tx-extra (conj tx-extra))))
+   (when-not (has-attribute? (db conn) (index-attr conformity-attr))
+     (d/transact conn
+                 (cond-> [{:db/id (d/tempid :db.part/db)
+                           :db/ident (index-attr conformity-attr)
+                           :db/valueType :db.type/long
+                           :db/cardinality :db.cardinality/one
+                           :db/doc "Index of this transaction within its norm"
+                           :db/index true
+                           :db.install/_attribute :db.part/db}]
+                   tx-extra (conj tx-extra))))
+   (when-not (has-function? (db conn) conformity-ensure-norm-tx)
+     (d/transact conn
+                 (cond-> [{:db/id (d/tempid :db.part/user)
+                           :db/ident conformity-ensure-norm-tx
+                           :db/doc "Ensures each norm tx is executed exactly once"
+                           :db/fn ensure-norm-tx-txfn}]
+                   tx-extra (conj tx-extra))))))
 
 (defn conforms-to?
   "Does database have a norm installed?
@@ -166,6 +178,10 @@
                                      in norm-map.
       norm-names       (optional) A collection of names of norms to conform to.
                        Will use keys of norm-map if not provided.
+      tx-extra         (optional) Additional data to include in the
+                       transactions made to ensure conformity can track
+                       migrations (see ensure-conformity-schema for more
+                       information).
 
   On success, returns a vector of maps with values for :norm-name, :tx-index,
   and :tx-result for each transaction that improved the db's conformity.
@@ -177,7 +193,9 @@
   ([conn norm-map norm-names]
    (ensure-conforms conn default-conformity-attribute norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
-   (ensure-conformity-schema conn conformity-attr)
+   (ensure-conforms conn conformity-attr norm-map norm-names nil))
+  ([conn conformity-attr norm-map norm-names tx-extra]
+   (ensure-conformity-schema conn conformity-attr tx-extra)
    (reduce-norms [] conn conformity-attr norm-map norm-names)))
 
 (defn- speculative-conn
@@ -213,8 +231,10 @@
   ([db norm-map norm-names]
    (with-conforms db default-conformity-attribute norm-map norm-names))
   ([db conformity-attr norm-map norm-names]
+   (with-conforms db conformity-attr norm-map norm-names nil))
+  ([db conformity-attr norm-map norm-names tx-extra]
    (let [conn (speculative-conn db)]
-     (ensure-conformity-schema conn conformity-attr)
+     (ensure-conformity-schema conn conformity-attr tx-extra)
      (let [result (reduce-norms [] conn conformity-attr norm-map norm-names)]
        {:db (d/db conn)
         :result result}))))
