@@ -1,5 +1,5 @@
 (defproject workflo/conformity "0.4.1-SNAPSHOT"
-  :description "Idempotent datom transacting for Datomic.\n\nSpecial thanks to Stuart Halloway for the original idea, implementation and permission to take it and run."
+  :description "An experimental fork of https://github.com/rkneufeld/conformity with minor modifications."
   :url "http://github.com/workfloapp/conformity"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}

@@ -8,6 +8,7 @@ with a few minor modifications.
 ## License
 
 Copyright © 2012-2014 Ryan Neufeld
+
 Copyright © 2016 Workflo, Inc.
 
 Distributed under the Eclipse Public License, the same as Clojure.
