@@ -1,4 +1,4 @@
-(defproject workflo/conformity "0.4.1-SNAPSHOT"
+(defproject workflo/conformity "0.4.2-SNAPSHOT"
   :description "An experimental fork of https://github.com/rkneufeld/conformity with minor modifications."
   :url "http://github.com/workfloapp/conformity"
   :license {:name "Eclipse Public License"
