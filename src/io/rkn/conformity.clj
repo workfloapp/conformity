@@ -65,7 +65,7 @@
      (d/transact conn
                  (cond-> [{:db/id (d/tempid :db.part/db)
                            :db/ident conformity-attr
-                           :db/valueType :db.type/keyword
+                           :db/valueType :db.type/string
                            :db/cardinality :db.cardinality/one
                            :db/doc "Name of this transaction's norm"
                            :db/index true
@@ -94,7 +94,7 @@
 
       conformity-attr  (optional) the keyword name of the attribute used to
                        track conformity
-      norm             the keyword name of the norm you want to check
+      norm             the string name of the norm you want to check
       tx-count         the count of transactions for that norm"
   ([db norm tx-count]
    (conforms-to? db default-conformity-attribute norm tx-count))
